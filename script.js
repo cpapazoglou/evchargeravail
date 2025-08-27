@@ -567,9 +567,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.isLocationWatched = isLocationWatched;
     window.addWatchedLocation = addWatchedLocation;
     window.checkWatchedLocations = checkWatchedLocations;
-    window.fetchChargers = fetchChargers;
 
-    const fetchChargers = async () => {
+    async function fetchChargers() {
         const url = 'https://wattvolt.eu.charge.ampeco.tech/api/v1/app/locations?operatorCountry=GR';
         const body = {
 											"locations": {
@@ -613,6 +612,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             chargerDetailsContainer.innerHTML = '<p>Error fetching charger data.</p>';
         }
     };
+
+    // Make fetchChargers globally accessible
+    window.fetchChargers = fetchChargers;
 
     const displayChargers = (chargers) => {
         const markerGroup = L.layerGroup().addTo(map);
