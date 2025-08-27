@@ -154,12 +154,18 @@ body {
         padding: 6px 10px;
     }
 
-    #sidebar {
-        width: 35vw;
+    body {
+        flex-direction: column;
+        height: 100vh;
     }
-
     #map {
-        width: 65vw;
+        width: 100vw;
+        height: 50vh;
+    }
+    #sidebar {
+        width: 100vw;
+        height: 50vh;
+        overflow-y: auto;
     }
 }
 
