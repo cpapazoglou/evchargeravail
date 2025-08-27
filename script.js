@@ -9,6 +9,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('   3. Test install prompt and background notifications');
     }
 
+    // TESTING MODE: Enable with ?test=true in URL
+    const isTestingMode = new URLSearchParams(window.location.search).get('test') === 'true';
+    if (isTestingMode) {
+        console.log('🧪 TESTING MODE ENABLED: Chargers will become available after 10 seconds');
+        console.log('📍 To test: 1) Click on red markers to watch them, 2) Wait 10 seconds, 3) Get notifications!');
+    }
+
     const map = L.map('map').setView([39.0742, 21.8243], 7); // Centered on Greece
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -17,6 +24,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }).addTo(map);
 
     const chargerDetailsContainer = document.getElementById('charger-details');
+
+    // Make chargerDetailsContainer globally accessible for button onclick handlers
+    window.chargerDetailsContainer = chargerDetailsContainer;
 
     // Add PWA status indicator
     const addPWAStatus = () => {
@@ -548,6 +558,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Make removeWatchedLocation available globally for the button onclick
     window.removeWatchedLocation = removeWatchedLocation;
 
+    // Make displayWatchedLocations available globally for the button onclick
+    window.displayWatchedLocations = displayWatchedLocations;
+
+    // Make other functions globally accessible for onclick handlers
+    window.updateWatchedIndicator = updateWatchedIndicator;
+    window.addRefreshButton = addRefreshButton;
+    window.isLocationWatched = isLocationWatched;
+    window.addWatchedLocation = addWatchedLocation;
+    window.checkWatchedLocations = checkWatchedLocations;
+    window.fetchChargers = fetchChargers;
+
     const fetchChargers = async () => {
         const url = 'https://wattvolt.eu.charge.ampeco.tech/api/v1/app/locations?operatorCountry=GR';
         const body = {
@@ -596,11 +617,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const displayChargers = (chargers) => {
         const markerGroup = L.layerGroup().addTo(map);
         const markerPositions = [];
-        
-        chargers.forEach(charger => {
+
+        chargers.forEach((charger, index) => {
             const [lat, lon] = charger.location.split(',').map(Number);
             markerPositions.push([lat, lon]);
-            
+
             // Check if any plug is available
             let isAvailable = false;
             if (charger.zones) {
@@ -614,7 +635,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 });
             }
-            
+
+            // TESTING MODE: Make some chargers initially unavailable
+            if (isTestingMode) {
+                isAvailable = false;
+                // Modify the charger data to reflect unavailable status
+                if (charger.zones) {
+                    charger.zones.forEach(zone => {
+                        if (zone.evses) {
+                            zone.evses.forEach(evse => {
+                                evse.status = 'occupied'; // Make them occupied
+                            });
+                        }
+                    });
+                }
+            }
+
             // Create marker with appropriate color
             const markerColor = isAvailable ? 'green' : 'red';
             const markerIcon = L.divIcon({
@@ -623,18 +659,112 @@ document.addEventListener('DOMContentLoaded', async () => {
                 iconSize: [20, 20],
                 iconAnchor: [10, 10]
             });
-            
+
             const marker = L.marker([lat, lon], { icon: markerIcon }).addTo(markerGroup);
 
             marker.on('click', () => {
                 displayChargerDetails(charger);
             });
         });
-        
+
         // Fit map to show all markers
         if (markerPositions.length > 0) {
             map.fitBounds(markerPositions, { padding: [20, 20] });
         }
+
+        // TESTING MODE: Schedule availability changes after 10 seconds
+        if (isTestingMode) {
+            setTimeout(() => {
+                simulateAvailabilityChanges(chargers, markerGroup);
+            }, 10000); // 10 seconds
+        }
+    };
+
+    // TESTING MODE: Simulate charger availability changes
+    const simulateAvailabilityChanges = (chargers, markerGroup) => {
+        console.log('🧪 TESTING: Simulating charger availability changes...');
+
+        const watchedLocations = getWatchedLocations();
+        let notificationsSent = 0;
+
+        chargers.forEach((charger, index) => {
+            // Only change the first 3 chargers that were made unavailable
+                const wasUnavailable = !charger.zones || charger.zones.every(zone =>
+                    !zone.evses || zone.evses.every(evse => evse.status !== 'available')
+                );
+
+                if (wasUnavailable) {
+                    // Make this charger available
+                    if (charger.zones && charger.zones.length > 0) {
+                        const firstZone = charger.zones[0];
+                        if (firstZone.evses && firstZone.evses.length > 0) {
+                            firstZone.evses[0].status = 'available';
+                            console.log(`🟢 Charger "${charger.name}" is now AVAILABLE!`);
+
+                            // Update marker color
+                            const [lat, lon] = charger.location.split(',').map(Number);
+                            markerGroup.eachLayer(marker => {
+                                const markerLatLng = marker.getLatLng();
+                                if (Math.abs(markerLatLng.lat - lat) < 0.001 &&
+                                    Math.abs(markerLatLng.lng - lon) < 0.001) {
+                                    const newIcon = L.divIcon({
+                                        className: 'custom-marker',
+                                        html: `<div style="background-color: green; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.3);"></div>`,
+                                        iconSize: [20, 20],
+                                        iconAnchor: [10, 10]
+                                    });
+                                    marker.setIcon(newIcon);
+                                }
+                            });
+
+                            // Send notification if this charger is being watched
+                            if (watchedLocations[charger.id]) {
+                                console.log(`📱 Sending notification for watched charger: ${charger.name}`);
+                                sendNotification(charger.name, charger.id);
+                                notificationsSent++;
+
+                                // Update the watched location status
+                                watchedLocations[charger.id].lastStatus = true;
+                                saveWatchedLocations(watchedLocations);
+                            }
+                        }
+                    }
+                }
+        });
+
+        if (notificationsSent > 0) {
+            console.log(`✅ Sent ${notificationsSent} notification(s) for chargers that became available!`);
+            updateWatchedIndicator();
+            chargerDetailsContainer.innerHTML = displayWatchedLocations();
+        } else {
+            console.log('ℹ️ No watched chargers became available (or none were being watched)');
+        }
+
+        // Show a success message
+        const testMessage = document.createElement('div');
+        testMessage.id = 'test-message';
+        testMessage.innerHTML = `🧪 Test Complete! ${notificationsSent} notification(s) sent.`;
+        testMessage.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #28a745;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 10000;
+            text-align: center;
+            animation: fadeInOut 3s ease-in-out;
+        `;
+
+        document.body.appendChild(testMessage);
+        setTimeout(() => {
+            if (testMessage.parentNode) {
+                testMessage.parentNode.removeChild(testMessage);
+            }
+        }, 3000);
     };
 
     const displayChargerDetails = (charger) => {
