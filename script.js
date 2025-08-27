@@ -28,57 +28,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Make chargerDetailsContainer globally accessible for button onclick handlers
     window.chargerDetailsContainer = chargerDetailsContainer;
 
-    // Add PWA status indicator
-    const addPWAStatus = () => {
-        const statusIndicator = document.createElement('div');
-        statusIndicator.id = 'pwa-status';
-        statusIndicator.innerHTML = '🌐 Web App';
-        statusIndicator.style.cssText = `
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 11px;
-            z-index: 1000;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            color: #666;
-        `;
-
-        // Update status based on visibility and installation
-        const updateStatus = () => {
-            const isFileProtocol = !location.protocol.startsWith('http');
-            if (isFileProtocol) {
-                statusIndicator.innerHTML = '📁 File Mode';
-                statusIndicator.style.background = 'rgba(255, 193, 7, 0.9)';
-                statusIndicator.style.color = '#000';
-            } else if (document.hidden) {
-                statusIndicator.innerHTML = '🔄 Background Mode';
-                statusIndicator.style.background = 'rgba(255, 193, 7, 0.9)';
-                statusIndicator.style.color = '#000';
-            } else if (window.matchMedia('(display-mode: standalone)').matches) {
-                statusIndicator.innerHTML = '📱 PWA Installed';
-                statusIndicator.style.background = 'rgba(40, 167, 69, 0.9)';
-                statusIndicator.style.color = '#fff';
-            } else {
-                statusIndicator.innerHTML = '🌐 Web App';
-                statusIndicator.style.background = 'rgba(255, 255, 255, 0.9)';
-                statusIndicator.style.color = '#666';
-            }
-        };
-
-        document.body.appendChild(statusIndicator);
-
-        // Update status on visibility change
-        document.addEventListener('visibilitychange', updateStatus);
-        window.addEventListener('appinstalled', updateStatus);
-
-        // Initial status
-        updateStatus();
-    };
-
-    addPWAStatus();
     let deferredPrompt;
     const installPrompt = document.getElementById('install-prompt');
     const installBtn = document.getElementById('install-btn');
@@ -534,7 +483,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isPWA = window.matchMedia('(display-mode: standalone)').matches;
         const backgroundMessage = isPWA ?
             '<div class="notification-info"><strong>� PWA Active:</strong> Chargers are monitored even when the app is minimized or closed.</div>' :
-            '<div class="notification-info"><strong>💡 Background Mode:</strong> For best results, keep the app open or install as PWA for continuous monitoring.</div>';
+            '<div class="notification-info"><strong>💡 Background Mode:</strong> For best results, keep the app open or install as PWA for continuous monitoring. <strong>iOS Users:</strong> To enable notifications for this PWA, see <a href="https://www.xda-developers.com/how-enable-safari-notifications-iphone/" target="_blank" rel="noopener" style="color:#0066cc;">How to Enable Safari Notifications on iPhone</a>.</div>';
 
         watchedHtml += backgroundMessage;
         watchedHtml += '<ul>';
