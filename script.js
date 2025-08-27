@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if ('Notification' in window && Notification.permission === 'granted') {
             const notification = new Notification('Charger Available!', {
                 body: `A charger at ${chargerName} is now available!`,
-                icon: '/favicon.ico',
+                icon: '/favicon.svg',
                 tag: `charger-${chargerId}`,
                 requireInteraction: true
             });
