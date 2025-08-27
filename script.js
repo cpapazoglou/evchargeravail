@@ -1,31 +1,169 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Check if running from file:// protocol and show warning
+    const isFileProtocol = !location.protocol.startsWith('http');
+    if (isFileProtocol) {
+        console.warn('⚠️ App is running from file:// protocol. For full PWA features, run on a web server with http:// or https:// protocol.');
+        console.log('💡 To test PWA features:');
+        console.log('   1. Use a local web server: python3 -m http.server 8000');
+        console.log('   2. Open: http://localhost:8000');
+        console.log('   3. Test install prompt and background notifications');
+    }
+
     const map = L.map('map').setView([39.0742, 21.8243], 7); // Centered on Greece
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==' // 1x1 transparent pixel as fallback
     }).addTo(map);
 
     const chargerDetailsContainer = document.getElementById('charger-details');
 
+    // Add PWA status indicator
+    const addPWAStatus = () => {
+        const statusIndicator = document.createElement('div');
+        statusIndicator.id = 'pwa-status';
+        statusIndicator.innerHTML = '🌐 Web App';
+        statusIndicator.style.cssText = `
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            color: #666;
+        `;
+
+        // Update status based on visibility and installation
+        const updateStatus = () => {
+            const isFileProtocol = !location.protocol.startsWith('http');
+            if (isFileProtocol) {
+                statusIndicator.innerHTML = '📁 File Mode';
+                statusIndicator.style.background = 'rgba(255, 193, 7, 0.9)';
+                statusIndicator.style.color = '#000';
+            } else if (document.hidden) {
+                statusIndicator.innerHTML = '🔄 Background Mode';
+                statusIndicator.style.background = 'rgba(255, 193, 7, 0.9)';
+                statusIndicator.style.color = '#000';
+            } else if (window.matchMedia('(display-mode: standalone)').matches) {
+                statusIndicator.innerHTML = '📱 PWA Installed';
+                statusIndicator.style.background = 'rgba(40, 167, 69, 0.9)';
+                statusIndicator.style.color = '#fff';
+            } else {
+                statusIndicator.innerHTML = '🌐 Web App';
+                statusIndicator.style.background = 'rgba(255, 255, 255, 0.9)';
+                statusIndicator.style.color = '#666';
+            }
+        };
+
+        document.body.appendChild(statusIndicator);
+
+        // Update status on visibility change
+        document.addEventListener('visibilitychange', updateStatus);
+        window.addEventListener('appinstalled', updateStatus);
+
+        // Initial status
+        updateStatus();
+    };
+
+    addPWAStatus();
+    let deferredPrompt;
+    const installPrompt = document.getElementById('install-prompt');
+    const installBtn = document.getElementById('install-btn');
+    const dismissBtn = document.getElementById('dismiss-install');
+
+    // Handle PWA install prompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Only show install prompt if running on http/https
+        if (!location.protocol.startsWith('http')) {
+            console.log('PWA install not available in file:// mode');
+            return;
+        }
+
+        e.preventDefault();
+        deferredPrompt = e;
+
+        // Show install prompt if not already dismissed
+        try {
+            if (!localStorage.getItem('installDismissed') && installPrompt) {
+                installPrompt.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Error reading install dismissal from localStorage:', error);
+            if (installPrompt) installPrompt.style.display = 'block';
+        }
+    });
+
+    // Handle install button click
+    if (installBtn) {
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+
+                if (outcome === 'accepted') {
+                    console.log('User accepted the install prompt');
+                }
+
+                deferredPrompt = null;
+                if (installPrompt) installPrompt.style.display = 'none';
+            }
+        });
+    }
+
+    // Handle dismiss button click
+    if (dismissBtn) {
+        dismissBtn.addEventListener('click', () => {
+            if (installPrompt) installPrompt.style.display = 'none';
+            try {
+                localStorage.setItem('installDismissed', 'true');
+            } catch (error) {
+                console.error('Error saving install dismissal to localStorage:', error);
+            }
+        });
+    }
+
+    // Hide install prompt if app is already installed
+    window.addEventListener('appinstalled', () => {
+        if (installPrompt) installPrompt.style.display = 'none';
+        console.log('PWA was installed successfully');
+    });
+
     // Notification management
     const requestNotificationPermission = async () => {
         if ('Notification' in window) {
-            const permission = await Notification.requestPermission();
-            return permission === 'granted';
+            try {
+                const permission = await Notification.requestPermission();
+                return permission === 'granted';
+            } catch (error) {
+                console.error('Error requesting notification permission:', error);
+                return false;
+            }
         }
         return false;
     };
 
     const getWatchedLocations = () => {
-        const watched = localStorage.getItem('watchedChargers');
-        return watched ? JSON.parse(watched) : {};
+        try {
+            const watched = localStorage.getItem('watchedChargers');
+            return watched ? JSON.parse(watched) : {};
+        } catch (error) {
+            console.error('Error reading from localStorage:', error);
+            return {};
+        }
     };
 
     const saveWatchedLocations = (watched) => {
-        localStorage.setItem('watchedChargers', JSON.stringify(watched));
+        try {
+            localStorage.setItem('watchedChargers', JSON.stringify(watched));
+        } catch (error) {
+            console.error('Error saving to localStorage:', error);
+        }
     };
 
-    const addWatchedLocation = (chargerId, chargerName) => {
+    let addWatchedLocation = (chargerId, chargerName) => {
         const watched = getWatchedLocations();
         watched[chargerId] = {
             name: chargerName,
@@ -34,18 +172,83 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         saveWatchedLocations(watched);
         updateWatchedIndicator();
+        addRefreshButton();
     };
 
-    const removeWatchedLocation = (chargerId) => {
+    let removeWatchedLocation = (chargerId) => {
         const watched = getWatchedLocations();
         delete watched[chargerId];
         saveWatchedLocations(watched);
         updateWatchedIndicator();
+        addRefreshButton();
     };
 
     const isLocationWatched = (chargerId) => {
         const watched = getWatchedLocations();
         return watched.hasOwnProperty(chargerId);
+    };
+
+    // Add watched locations indicator
+    const updateWatchedIndicator = () => {
+        const watched = getWatchedLocations();
+        const count = Object.keys(watched).length;
+
+        let indicator = document.getElementById('watched-indicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'watched-indicator';
+            document.body.appendChild(indicator);
+        }
+
+        if (count > 0) {
+            indicator.innerHTML = `👀 Watching ${count} location${count > 1 ? 's' : ''}`;
+            indicator.style.display = 'block';
+        } else {
+            indicator.style.display = 'none';
+        }
+    };
+
+    // Add manual refresh button for watched locations
+    const addRefreshButton = () => {
+        const watched = getWatchedLocations();
+        const count = Object.keys(watched).length;
+
+        if (count > 0) {
+            const refreshButton = document.createElement('button');
+            refreshButton.id = 'refresh-watched';
+            refreshButton.innerHTML = '🔄 Refresh Status';
+            refreshButton.style.cssText = `
+                position: absolute;
+                top: 50px;
+                right: 10px;
+                background: #007bff;
+                color: white;
+                border: none;
+                padding: 8px 12px;
+                border-radius: 20px;
+                cursor: pointer;
+                font-size: 12px;
+                z-index: 1000;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            `;
+
+            refreshButton.onclick = () => {
+                refreshButton.innerHTML = '⏳ Checking...';
+                refreshButton.disabled = true;
+
+                checkWatchedLocations().finally(() => {
+                    refreshButton.innerHTML = '🔄 Refresh Status';
+                    refreshButton.disabled = false;
+                });
+            };
+
+            document.body.appendChild(refreshButton);
+        } else {
+            const existingButton = document.getElementById('refresh-watched');
+            if (existingButton) {
+                existingButton.remove();
+            }
+        }
     };
 
     const sendNotification = (chargerName, chargerId) => {
@@ -130,41 +333,208 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check watched locations every 30 seconds
     setInterval(checkWatchedLocations, 30000);
 
-    // Add watched locations indicator
-    const updateWatchedIndicator = () => {
-        const watched = getWatchedLocations();
-        const count = Object.keys(watched).length;
+    // Register service worker for background notifications
+    const registerServiceWorker = async () => {
+        // Only register service worker if running on http/https
+        if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+            try {
+                const registration = await navigator.serviceWorker.register('/sw.js');
+                console.log('Service Worker registered:', registration);
+                console.log('Service Worker registered:', registration);
+                console.log('Service Worker registered:', registration);
 
-        let indicator = document.getElementById('watched-indicator');
-        if (!indicator) {
-            indicator = document.createElement('div');
-            indicator.id = 'watched-indicator';
-            document.body.appendChild(indicator);
-        }
+                // Handle service worker updates
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    if (newWorker) {
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // New version available
+                                if (confirm('A new version is available! Reload to update?')) {
+                                    window.location.reload();
+                                }
+                            }
+                        });
+                    }
+                });
 
-        if (count > 0) {
-            indicator.innerHTML = `👀 Watching ${count} location${count > 1 ? 's' : ''}`;
-            indicator.style.display = 'block';
-        } else {
-            indicator.style.display = 'none';
+                // Register background sync if supported
+                if ('sync' in registration) {
+                    try {
+                        await registration.sync.register('check-chargers');
+                        console.log('Background sync registered');
+                    } catch (error) {
+                        console.log('Background sync registration failed:', error.message);
+                    }
+                }
+
+                // Register periodic sync if supported (Chrome 80+)
+                if ('periodicSync' in registration) {
+                    try {
+                        const status = await navigator.permissions.query({
+                            name: 'periodic-background-sync',
+                        });
+
+                        if (status.state === 'granted') {
+                            await registration.periodicSync.register('charger-status-check', {
+                                minInterval: 60000 // 1 minute
+                            });
+                            console.log('Periodic background sync registered');
+                        }
+                    } catch (error) {
+                        // Periodic sync not supported or permission denied
+                        console.log('Periodic background sync not available:', error.message);
+                    }
+                }
+
+                return registration;
+            } catch (error) {
+                console.error('Service Worker registration failed:', error);
+                return null;
+            }
         }
+        return null;
     };
+
+    // Register service worker on load
+    const registration = await registerServiceWorker();
+
+    // Handle service worker messages
+    if (registration) {
+        navigator.serviceWorker.addEventListener('message', event => {
+            if (event.data) {
+                switch (event.data.type) {
+                    case 'CHECK_CHARGERS':
+                        checkWatchedLocations();
+                        break;
+                    case 'BACKGROUND_CHECK_CHARGERS':
+                        console.log('Background check requested at:', new Date(event.data.timestamp));
+                        checkWatchedLocations();
+                        break;
+                    case 'REFRESH_ALL_CHARGERS':
+                        console.log('Background refresh requested at:', new Date(event.data.timestamp));
+                        fetchChargers();
+                        break;
+                }
+            }
+        });
+    }
+
+    // Enhanced visibility change handling for PWA
+    let lastCheckTime = Date.now();
+    let backgroundCheckInterval;
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            // Page became visible, check immediately and reset interval
+            const now = Date.now();
+            if (now - lastCheckTime > 30000) { // Only check if more than 30s have passed
+                console.log('Page visible, checking chargers...');
+                checkWatchedLocations();
+            }
+            lastCheckTime = now;
+
+            // Clear background interval when visible
+            if (backgroundCheckInterval) {
+                clearInterval(backgroundCheckInterval);
+                backgroundCheckInterval = null;
+            }
+        } else {
+            // Page became hidden, start background checking
+            console.log('Page hidden, switching to background mode');
+            if (registration && 'sync' in registration) {
+                // Trigger background sync
+                registration.sync.register('check-chargers').catch(err => {
+                    console.log('Background sync failed:', err.message);
+                });
+            }
+        }
+    });
+
+    // Smart checking based on visibility
+    const startSmartChecking = () => {
+        setInterval(() => {
+            if (!document.hidden) {
+                checkWatchedLocations();
+                lastCheckTime = Date.now();
+            }
+        }, 30000); // Check every 30 seconds when visible
+    };
+
+    startSmartChecking();
+
+    // Functions are already defined above, no need to redefine them
+
+    // Offline detection
+    const addOfflineIndicator = () => {
+        const offlineIndicator = document.createElement('div');
+        offlineIndicator.id = 'offline-indicator';
+        offlineIndicator.className = 'offline-indicator';
+        offlineIndicator.innerHTML = '📵 Offline Mode';
+        document.body.appendChild(offlineIndicator);
+
+        const updateOnlineStatus = () => {
+            if (!navigator.onLine) {
+                offlineIndicator.classList.add('show');
+            } else {
+                offlineIndicator.classList.remove('show');
+            }
+        };
+
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+
+        // Initial check
+        updateOnlineStatus();
+    };
+
+    addOfflineIndicator();
+
+    // Functions are already defined above, no need to redefine them
 
     const displayWatchedLocations = () => {
         const watched = getWatchedLocations();
         const watchedCount = Object.keys(watched).length;
 
         if (watchedCount === 0) {
-            return '<p>You are not watching any locations.</p>';
+            const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+            const isFileProtocol = !location.protocol.startsWith('http');
+            let pwaMessage = '';
+
+            if (isFileProtocol) {
+                pwaMessage = '<strong>⚠️ File Mode:</strong> For full PWA features (background notifications, install), run on a web server with http:// or https:// protocol.';
+            } else if (isPWA) {
+                pwaMessage = '<strong>🚀 PWA Mode:</strong> The app will continue monitoring chargers even when minimized!';
+            } else {
+                pwaMessage = '<strong>💡 Pro Tip:</strong> Install as PWA for background notifications when minimized.';
+            }
+
+            return `
+                <div class="notification-info">
+                    <strong>🔔 Notification Feature:</strong><br>
+                    Click on red markers (unavailable chargers) to subscribe for notifications when they become available.<br><br>
+                    ${pwaMessage}
+                </div>
+                <p>You are not watching any locations.</p>
+            `;
         }
 
-        let watchedHtml = `<h4>Watched Locations (${watchedCount})</h4><ul>`;
+        let watchedHtml = `<h4>Watched Locations (${watchedCount})</h4>`;
+
+        const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+        const backgroundMessage = isPWA ?
+            '<div class="notification-info"><strong>� PWA Active:</strong> Chargers are monitored even when the app is minimized or closed.</div>' :
+            '<div class="notification-info"><strong>💡 Background Mode:</strong> For best results, keep the app open or install as PWA for continuous monitoring.</div>';
+
+        watchedHtml += backgroundMessage;
+        watchedHtml += '<ul>';
+
         Object.entries(watched).forEach(([id, data]) => {
             watchedHtml += `
                 <li style="margin-bottom: 10px; padding: 8px; background-color: #f8f9fa; border-radius: 4px;">
                     <strong>${data.name}</strong><br>
                     <small>Added: ${new Date(data.lastStatus ? data.subscribedAt : Date.now()).toLocaleDateString()}</small>
-                    <button onclick="removeWatchedLocation('${id}'); displayWatchedLocations(); updateWatchedIndicator();" 
+                    <button onclick="removeWatchedLocation('${id}'); chargerDetailsContainer.innerHTML = displayWatchedLocations(); updateWatchedIndicator(); addRefreshButton();" 
                             style="float: right; background: #dc3545; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 12px;">
                         Remove
                     </button>
@@ -177,9 +547,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Make removeWatchedLocation available globally for the button onclick
     window.removeWatchedLocation = removeWatchedLocation;
-
-    // Initialize with watched locations
-    chargerDetailsContainer.innerHTML = displayWatchedLocations();
 
     const fetchChargers = async () => {
         const url = 'https://wattvolt.eu.charge.ampeco.tech/api/v1/app/locations?operatorCountry=GR';
@@ -338,6 +705,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     };
+
+    // Initialize with watched locations
+    chargerDetailsContainer.innerHTML = displayWatchedLocations();
 
     fetchChargers();
 });
