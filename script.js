@@ -760,13 +760,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         chargerDetailsContainer.innerHTML = `
-            <h3>${charger.name}</h3>
-            <p><strong>Provider:</strong> Protergia</p>
-            <p><strong>Address:</strong> ${charger.address}</p>
-            <h4>Plugs:</h4>
-            ${plugsHtml}
-            ${notificationButton}
-        `;
+                <button class="close-details-btn" id="close-details-btn">Close</button>
+                <h3>${charger.name}</h3>
+                <p><strong>Provider:</strong> Protergia</p>
+                <p><strong>Address:</strong> ${charger.address}</p>
+                <h4>Plugs:</h4>
+                ${plugsHtml}
+                ${notificationButton}
+            `;
+
+            // Add event listener for close button
+            const closeBtn = document.getElementById('close-details-btn');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    chargerDetailsContainer.innerHTML = displayWatchedLocations();
+                });
+            }
 
         // Add event listener for notification button
         const notificationBtn = document.getElementById('notification-btn');

@@ -23,6 +23,18 @@ body {
     padding: 0;
 }
 
+.close-details-btn {
+    float: right;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
 #charger-details li {
     margin-bottom: 5px;
 }
