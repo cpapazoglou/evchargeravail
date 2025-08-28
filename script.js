@@ -482,7 +482,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const isPWA = window.matchMedia('(display-mode: standalone)').matches;
         const backgroundMessage = isPWA ?
-            '<div class="notification-info"><strong>� PWA Active:</strong> Chargers are monitored even when the app is minimized or closed.</div>' :
+            '<div class="notification-info"><strong>💡 PWA Active:</strong> Chargers are monitored even when the app is minimized or closed.</div>' :
             '<div class="notification-info"><strong>💡 Background Mode:</strong> For best results, keep the app open or install as PWA for continuous monitoring. <strong>iOS Users:</strong> To enable notifications for this PWA, see <a href="https://www.xda-developers.com/how-enable-safari-notifications-iphone/" target="_blank" rel="noopener" style="color:#0066cc;">How to Enable Safari Notifications on iPhone</a>.</div>';
 
         watchedHtml += backgroundMessage;
