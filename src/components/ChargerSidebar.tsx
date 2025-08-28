@@ -6,10 +6,12 @@ import { ChargerService } from '../services/chargerService';
 interface ChargerSidebarProps {
   selectedCharger: { charger: Charger | LidlCharger; type: 'protergia' | 'lidl' } | null;
   onClose: () => void;
-  onWatchedChange: () => void;
+  onWatchedChange?: () => void;
+  notificationPermission?: NotificationPermission;
+  onRequestNotificationPermission?: () => void;
 }
 
-export default function ChargerSidebar({ selectedCharger, onClose, onWatchedChange }: ChargerSidebarProps) {
+export default function ChargerSidebar({ selectedCharger, onClose, onWatchedChange, notificationPermission, onRequestNotificationPermission }: ChargerSidebarProps) {
   const [watchedLocations, setWatchedLocations] = useState<WatchedLocations>({});
   const [lidlDetails, setLidlDetails] = useState<LidlLocationDetails | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,7 +50,7 @@ export default function ChargerSidebar({ selectedCharger, onClose, onWatchedChan
       StorageService.addWatchedLocation(chargerId, chargerName);
     }
     setWatchedLocations(StorageService.getWatchedLocations());
-    onWatchedChange();
+    onWatchedChange?.();
   };
 
   const handlePlugWatchToggle = (plugKey: string, chargerName: string, plugId: string) => {
@@ -58,7 +60,7 @@ export default function ChargerSidebar({ selectedCharger, onClose, onWatchedChan
       StorageService.addWatchedLocation(plugKey, `${chargerName} (Plug ${plugId})`);
     }
     setWatchedLocations(StorageService.getWatchedLocations());
-    onWatchedChange();
+    onWatchedChange?.();
   };
 
   const renderWatchedLocations = () => {
@@ -82,6 +84,35 @@ export default function ChargerSidebar({ selectedCharger, onClose, onWatchedChan
           <div style={{ padding: '15px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px' }}>
             <strong>🔔 Notification Feature:</strong><br />
             Click on red markers (unavailable chargers) to subscribe for notifications when they become available.<br /><br />
+            {notificationPermission === 'default' && onRequestNotificationPermission && (
+              <div style={{ marginTop: '10px' }}>
+                <button
+                  onClick={onRequestNotificationPermission}
+                  style={{
+                    background: '#28a745',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  Enable Notifications
+                </button>
+              </div>
+            )}
+            {notificationPermission === 'granted' && (
+              <div style={{ marginTop: '10px', color: '#28a745' }}>
+                ✅ Notifications enabled
+              </div>
+            )}
+            {notificationPermission === 'denied' && (
+              <div style={{ marginTop: '10px', color: '#dc3545' }}>
+                ❌ Notifications blocked. Enable in browser settings.
+              </div>
+            )}
+            <br /><br />
             <strong>💡 {pwaMessage}</strong>
           </div>
           <p>You are not watching any locations.</p>
@@ -99,6 +130,34 @@ export default function ChargerSidebar({ selectedCharger, onClose, onWatchedChan
         <h4>Watched Locations ({count})</h4>
         <div style={{ padding: '10px', borderRadius: '8px', marginBottom: '15px', fontSize: '14px' }}>
           <strong>💡 {backgroundMessage}</strong>
+          {notificationPermission === 'default' && onRequestNotificationPermission && (
+            <div style={{ marginTop: '10px' }}>
+              <button
+                onClick={onRequestNotificationPermission}
+                style={{
+                  background: '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  padding: '6px 12px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }}
+              >
+                Enable Notifications
+              </button>
+            </div>
+          )}
+          {notificationPermission === 'granted' && (
+            <div style={{ marginTop: '10px', color: '#28a745', fontSize: '12px' }}>
+              ✅ Notifications enabled
+            </div>
+          )}
+          {notificationPermission === 'denied' && (
+            <div style={{ marginTop: '10px', color: '#dc3545', fontSize: '12px' }}>
+              ❌ Notifications blocked
+            </div>
+          )}
         </div>
         <ul style={{ listStyle: 'none', padding: 0 }}>
           {Object.entries(watchedLocations).map(([id, data]) => (
@@ -109,7 +168,7 @@ export default function ChargerSidebar({ selectedCharger, onClose, onWatchedChan
                 onClick={() => {
                   StorageService.removeWatchedLocation(id);
                   setWatchedLocations(StorageService.getWatchedLocations());
-                  onWatchedChange();
+                  onWatchedChange?.();
                 }}
                 style={{
                   float: 'right',
@@ -292,7 +351,9 @@ export default function ChargerSidebar({ selectedCharger, onClose, onWatchedChan
       overflowY: 'auto', 
       padding: '20px',
       boxSizing: 'border-box',
-      paddingBottom: '75px'
+      paddingBottom: '75px',
+      backgroundColor: 'white',
+      color: '#000000'
     }}>
       <h2>EV Charger Availability</h2>
       

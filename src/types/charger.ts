@@ -3,6 +3,7 @@ export interface Evse {
   id?: string;
   status: string;
   connectors?: Connector[];
+	isAvailable: boolean;
 }
 
 export interface Connector {

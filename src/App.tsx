@@ -14,7 +14,7 @@ function App() {
   const [selectedCharger, setSelectedCharger] = useState<{ charger: Charger | LidlCharger; type: 'protergia' | 'lidl' } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [watchedCount, setWatchedCount] = useState(0);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
   // Load chargers on mount
   useEffect(() => {
@@ -51,11 +51,6 @@ function App() {
     loadChargers();
   }, []);
 
-  const updateWatchedCount = () => {
-    const watched = StorageService.getWatchedLocations();
-    setWatchedCount(Object.keys(watched).length);
-  };
-
   const checkWatchedLocations = useCallback(async () => {
     const watchedLocations = StorageService.getWatchedLocations();
     const watchedIds = Object.keys(watchedLocations);
@@ -73,7 +68,7 @@ function App() {
             charger.zones.forEach(zone => {
               if (zone.evses) {
                 zone.evses.forEach(evse => {
-                  if (evse.status && evse.status.toLowerCase() === 'available') {
+                  if (evse.isAvailable ) {
                     isAvailable = true;
                   }
                 });
@@ -89,7 +84,6 @@ function App() {
             NotificationService.sendNotification(charger.name, charger.id, () => {
               // Remove from watched list since it's now available
               StorageService.removeWatchedLocation(charger.id);
-              updateWatchedCount();
               // Refresh chargers
               window.location.reload();
             });
@@ -106,16 +100,20 @@ function App() {
     }
   }, []);
 
-  // Request notification permission and setup monitoring
+  // Setup monitoring (without automatic permission request)
   useEffect(() => {
-    NotificationService.requestPermission();
-    updateWatchedCount();
-    
     // Check watched locations every 30 seconds
     const interval = setInterval(checkWatchedLocations, 30000);
     
     return () => clearInterval(interval);
   }, [checkWatchedLocations]);
+
+  // Initialize notification permission status
+  useEffect(() => {
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
 
   const handleChargerClick = (charger: Charger | LidlCharger, type: 'protergia' | 'lidl') => {
     setSelectedCharger({ charger, type });
@@ -125,8 +123,16 @@ function App() {
     setSelectedCharger(null);
   };
 
-  const handleWatchedChange = () => {
-    updateWatchedCount();
+  const handleRequestNotificationPermission = async () => {
+    const granted = await NotificationService.requestPermission();
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+    if (granted) {
+      alert('Notification permission granted! You will now receive notifications when watched chargers become available.');
+    } else {
+      alert('Notification permission denied. You can enable notifications later in your browser settings.');
+    }
   };
 
   if (loading) {
@@ -187,27 +193,10 @@ function App() {
       <ChargerSidebar
         selectedCharger={selectedCharger}
         onClose={handleCloseSidebar}
-        onWatchedChange={handleWatchedChange}
+        notificationPermission={notificationPermission}
+        onRequestNotificationPermission={handleRequestNotificationPermission}
       />
       
-      {/* Watched locations indicator */}
-      {watchedCount > 0 && (
-        <div style={{
-          position: 'absolute',
-          top: '10px',
-          left: '10px',
-          background: 'rgba(0, 0, 0, 0.8)',
-          color: 'white',
-          padding: '8px 12px',
-          borderRadius: '20px',
-          fontSize: '12px',
-          zIndex: 1000,
-          boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
-        }}>
-          👀 Watching {watchedCount} location{watchedCount > 1 ? 's' : ''}
-        </div>
-      )}
-
       <PWAInstallPrompt />
 
       {/* Footer */}
