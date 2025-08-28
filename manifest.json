@@ -8,15 +8,16 @@
   "theme_color": "#28a745",
   "orientation": "portrait-primary",
   "scope": "/",
+  "version": "1.0.0",
   "icons": [
     {
-      "src": "/icon-plug-192.svg",
+      "src": "/icon-plug-192.svg?v=1.0.0",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-plug-512.svg",
+      "src": "/icon-plug-512.svg?v=1.0.0",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"

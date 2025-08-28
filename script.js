@@ -294,14 +294,111 @@ document.addEventListener('DOMContentLoaded', async () => {
     setInterval(checkWatchedLocations, 30000);
 
     // Register service worker for background notifications
+    const addUpdateButton = (registration) => {
+        // Add update button for iOS PWA users
+        const updateButton = document.createElement('button');
+        updateButton.id = 'pwa-update-btn';
+        updateButton.innerHTML = '🔄 Check for Updates';
+        updateButton.style.cssText = `
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: none;
+        `;
+
+        updateButton.onclick = async () => {
+            updateButton.innerHTML = '⏳ Checking...';
+            updateButton.disabled = true;
+
+            try {
+                // Force update check
+                const updateResult = await registration.update();
+
+                if (updateResult) {
+                    console.log('Update found:', updateResult);
+                    updateButton.innerHTML = '✅ Update Available!';
+                    updateButton.style.background = '#28a745';
+
+                    setTimeout(() => {
+                        if (confirm('Update available! Reload to apply changes?')) {
+                            window.location.reload();
+                        } else {
+                            updateButton.innerHTML = '🔄 Check for Updates';
+                            updateButton.disabled = false;
+                        }
+                    }, 500);
+                } else {
+                    updateButton.innerHTML = '✅ Up to Date';
+                    updateButton.style.background = '#28a745';
+                    setTimeout(() => {
+                        updateButton.innerHTML = '🔄 Check for Updates';
+                        updateButton.disabled = false;
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Update check failed:', error);
+                updateButton.innerHTML = '❌ Update Failed';
+                updateButton.style.background = '#dc3545';
+                setTimeout(() => {
+                    updateButton.innerHTML = '🔄 Check for Updates';
+                    updateButton.disabled = false;
+                }, 2000);
+            }
+        };
+
+        // Show button only on iOS or when running as PWA
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+
+        if (isIOS || isPWA) {
+            document.body.appendChild(updateButton);
+            updateButton.style.display = 'block';
+            console.log('🔄 Update button added for iOS/PWA users');
+        }
+    };
+
     const registerServiceWorker = async () => {
         // Only register service worker if running on http/https
         if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
             try {
-                const registration = await navigator.serviceWorker.register('/sw.js');
+                const registration = await navigator.serviceWorker.register('/sw.js?v=' + Date.now(), {
+                    scope: '/'
+                });
                 console.log('Service Worker registered:', registration);
-                console.log('Service Worker registered:', registration);
-                console.log('Service Worker registered:', registration);
+
+                // Force update check
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    if (newWorker) {
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // New version available
+                                console.log('🔄 New service worker available!');
+                                if (confirm('A new version is available! Reload to update?')) {
+                                    newWorker.postMessage({ action: 'skipWaiting' });
+                                    window.location.reload();
+                                }
+                            } else if (newWorker.state === 'installed' && !navigator.serviceWorker.controller) {
+                                // First time installation
+                                console.log('Service worker installed for the first time');
+                            }
+                        });
+                    }
+                });
+
+                // Check for updates every 30 seconds
+                setInterval(() => {
+                    registration.update();
+                }, 30000);
 
                 // Handle service worker updates
                 registration.addEventListener('updatefound', () => {
@@ -346,6 +443,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         console.log('Periodic background sync not available:', error.message);
                     }
                 }
+
+                // Add manual update check button for iOS
+                addUpdateButton(registration);
 
                 return registration;
             } catch (error) {
