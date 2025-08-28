@@ -97,8 +97,8 @@ def update_google_sheet(rows, credentials_json, sheet_name='EV Chargers in Greec
     df = pd.DataFrame(rows)
     
     # Add headers and all data in one batch to avoid quota errors
-		from datetime import datetime
-		current_date = datetime.now().strftime('%Y-%m-%d')
+    from datetime import datetime
+    current_date = datetime.now().strftime('%Y-%m-%d')
     headers = [f"Name - {current_date}", 'Address', 'Coordinates', 'Max Electric Power', 'Party ID', 'HPC']
     data = [headers] + df.astype(str).values.tolist()
     worksheet.update(values=data, range_name='A1')
