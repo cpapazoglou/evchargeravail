@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "git stash && npm run build && git checkout gh-pages && git rm -rf . && git clean -fd && git checkout react-version -- dist && cp -r dist/* . && rm -rf dist && git add . && git commit -m 'Deploy to GitHub Pages' && git push origin gh-pages && git checkout react-version && git stash pop"
+    "deploy": "git stash && npm install && npm run build && git checkout gh-pages && git rm -rf . && git clean -fd && git checkout react-version -- dist && cp -r dist/* . && rm -rf dist && git add . && git commit -m 'Deploy to GitHub Pages' && git push origin gh-pages && git checkout react-version && git stash pop"
   },
   "dependencies": {
     "@types/leaflet": "^1.9.20",
