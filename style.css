@@ -59,6 +59,38 @@ body {
     background: linear-gradient(to right, green 50%, red 50%);
 }
 
+/* Lidl charger markers */
+.circle-lidl {
+    background: #007cba; /* Lidl blue color */
+    position: relative;
+    border: 2px solid white;
+    box-shadow: 0 0 8px rgba(0,124,186,0.4);
+}
+
+.circle-lidl::after {
+    content: "L";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 10px;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.7);
+}
+
+/* Leaflet marker customization */
+.custom-marker {
+    border: none !important;
+    background: none !important;
+}
+
+.lidl-marker {
+    border: 2px solid #007cba !important;
+    border-radius: 50% !important;
+    background: rgba(0, 124, 186, 0.1) !important;
+}
+
 /* Notification button styles */
 .subscribe-btn, .unsubscribe-btn {
     margin-top: 15px;

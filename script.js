@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
+		let token = ''; //token for recharge api
     // Check if running from file:// protocol and show warning
     const isFileProtocol = !location.protocol.startsWith('http');
     if (isFileProtocol) {
@@ -517,6 +518,209 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.addWatchedLocation = addWatchedLocation;
     window.checkWatchedLocations = checkWatchedLocations;
 
+    async function fetchLidlChargers() {
+        try {
+            console.log('🔍 Fetching Lidl charger token...');
+
+            // Step 1: Get token from the charging points page
+            console.log('🔍 Fetching token from charging points page...');
+            const tokenResponse = await fetch('https://api.codetabs.com/v1/proxy?quest=https://electrokinisi.yme.gov.gr/public/ChargingPoints/');
+
+            if (!tokenResponse.ok) {
+                console.error(`❌ HTTP Error fetching token page: ${tokenResponse.status} ${tokenResponse.statusText}`);
+                const errorText = await tokenResponse.text();
+                console.error('Error response body:', errorText.substring(0, 500));
+                throw new Error(`Failed to fetch token page: ${tokenResponse.status}`);
+            }
+
+            const htmlText = await tokenResponse.text();
+            console.log('📄 Raw HTML response (first 200 chars):', htmlText.substring(0, 200));
+
+            // Parse HTML to find token input
+            const tokenMatch = htmlText.match(/<input[^>]*id="token"[^>]*value="([^"]*)"/);
+            if (!tokenMatch) {
+                console.error('❌ Token not found in page HTML');
+                console.error('Full HTML response:', htmlText);
+                throw new Error('Token input not found in page HTML');
+            }
+
+            token = tokenMatch[1];
+            console.log('✅ Got token:', token.substring(0, 20) + '...');
+
+            // Step 2: Fetch all chargers using the token
+            console.log('🔌 Fetching all chargers...');
+            const chargersResponse = await fetch('https://electrokinisi.yme.gov.gr/myfah-api/openApi/GetPLocations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ token: token, PartyIds: ["LDL"], })
+            });
+
+            if (!chargersResponse.ok) {
+                throw new Error(`Failed to fetch chargers: ${chargersResponse.status}`);
+            }
+
+            const chargersData = await chargersResponse.json();
+            console.log(`📊 Found ${chargersData.length} total chargers`);
+
+            // Step 3: Filter duplicate chargers
+            const lidlChargers = chargersData.features.filter(charger =>
+                charger.properties.isActive === 1
+            );
+
+            console.log(`🏪 Found ${lidlChargers.length} Lidl chargers`);
+
+            // Step 4: Display Lidl chargers on map
+            if (lidlChargers.length > 0) {
+                displayLidlChargers(lidlChargers);
+
+            }
+
+        } catch (error) {
+            console.error('❌ Error fetching Lidl chargers:', error);
+        }
+    }
+
+    const displayLidlChargers = (chargers) => {
+        const lidlMarkerGroup = L.layerGroup().addTo(map);
+        const markerPositions = [];
+
+        chargers.forEach((charger, index) => {
+            // Extract coordinates - assuming format is "lat,lng" or we need to parse differently
+            let lat, lng;
+            if (charger.geometry.coordinates) {
+                [lat, lng] = [charger.geometry.coordinates[0], charger.geometry.coordinates[1]];
+            } else {
+                console.warn(`⚠️ Could not parse coordinates for charger ${charger.Name}: ${charger.Coordinates}`);
+                return; // Skip chargers without valid coordinates
+            }
+
+            if (isNaN(lat) || isNaN(lng)) {
+                console.warn(`⚠️ Invalid coordinates for charger ${charger.Name}: ${charger.Coordinates}`);
+                return;
+            }
+
+            markerPositions.push([lat, lng]);
+
+            // Create a custom marker for Lidl chargers (different color/style)
+            const markerIcon = L.divIcon({
+                className: 'custom-marker lidl-marker',
+                html: `<div class="charger-circle circle-lidl" title="Lidl Charger"></div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+
+            const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(lidlMarkerGroup);
+
+            marker.on('click', () => {
+                displayLidlChargerDetails(charger);
+            });
+        });
+
+        console.log(`📍 Added ${markerPositions.length} Lidl charger markers to map`);
+
+        // Fit map to show all markers if there are Lidl chargers
+        if (markerPositions.length > 0) {
+            map.fitBounds(markerPositions, { padding: [20, 20] });
+        }
+    };
+
+    const displayLidlChargerDetails = async (charger) => {
+        const locationId = charger.properties.location_id || charger.properties.id;
+        console.log(`📍 Fetching details for charger: ${charger.properties.name || locationId}`);
+
+        try {
+            const locationResponse = await fetch('https://electrokinisi.yme.gov.gr/myfah-api/openApi/GetLocation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    location_id: locationId,
+                    token: token
+                })
+            });
+
+            if (!locationResponse.ok) {
+                console.warn(`⚠️ Failed to get details for charger ${charger.properties.name}: ${locationResponse.status} ${locationResponse.statusText}`);
+                const errorText = await locationResponse.text();
+                console.error('Error response:', errorText);
+
+                // Still show basic info if detailed fetch fails
+                chargerDetailsContainer.innerHTML = `
+                    <button class="close-details-btn" id="close-details-btn">Close</button>
+                    <h3>🏪 ${charger.properties.LocationName || charger.properties.name || 'Lidl Charger'}</h3>
+                    <p><strong>Provider:</strong> Lidl </p>
+                    <p><strong>Address:</strong> ${charger.properties.address || 'Address not available'}</p>
+                    <p><strong>Status:</strong> Unable to load detailed information</p>
+                `;
+
+                // Add event listener for close button
+                const closeBtn = document.getElementById('close-details-btn');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        chargerDetailsContainer.innerHTML = '<p>Click on a charger to see the details.</p>';
+                    });
+                }
+                return;
+            }
+
+            const locationData = await locationResponse.json();
+            console.log(`✅ Got detailed info for: ${charger.properties.name || locationId}`, locationData);
+
+            // Build detailed charger information
+            const chargerName = locationData.Loc.name || charger.properties.LocationName || charger.properties.name || 'Lidl Charger';
+            const address = locationData.Loc.address || charger.properties.Address || 'Address not available';
+            const connectors = locationData.Loc.evses;
+
+            let detailsHtml = `
+                <button class="close-details-btn" id="close-details-btn">Close</button>
+                <h3>🏪 ${chargerName}</h3>
+                <p><strong>Provider:</strong> ${locationData.provider || charger.properties.Provider || 'Lidl'}</p>
+                <p><strong>Address:</strong> ${address}</p>
+            `;
+
+            if (connectors && connectors.length > 0) {
+                detailsHtml += `<h4>🔌 Connectors:</h4><ul>`;
+                connectors.forEach((connector, index) => {
+                    const power = connector.connectors[0].max_electric_power/1000;
+                    const status = connector.status;
+                    const type = connector.connectors[0].standard;
+                    detailsHtml += `<li><strong>${type} (${power} kW)</strong> - ${status}</li>`;
+                });
+                detailsHtml += `</ul>`;
+            }
+
+            chargerDetailsContainer.innerHTML = detailsHtml;
+
+        } catch (error) {
+            console.error(`❌ Error fetching details for charger ${charger.properties.name}:`, error);
+
+            // Show basic info with error message
+            chargerDetailsContainer.innerHTML = `
+                <button class="close-details-btn" id="close-details-btn">Close</button>
+                <h3>🏪 ${charger.properties.LocationName || charger.properties.name || 'Lidl Charger'}</h3>
+                <p><strong>Provider:</strong> ${charger.properties.Provider || 'Lidl'}</p>
+                <p><strong>Address:</strong> ${charger.properties.Address || 'Address not available'}</p>
+                <p><strong>Status:</strong> Error loading detailed information</p>
+            `;
+        }
+
+        chargerDetailsContainer.innerHTML += 'Lidl chargers don\'t support notifications 😔';
+
+        // Add event listener for close button
+        const closeBtn = document.getElementById('close-details-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                chargerDetailsContainer.innerHTML = '<p>Click on a charger to see the details.</p>';
+            });
+        }
+    };
+
+    // Make fetchLidlChargers globally accessible
+    window.fetchLidlChargers = fetchLidlChargers;
+
     async function fetchChargers() {
         const url = 'https://wattvolt.eu.charge.ampeco.tech/api/v1/app/locations?operatorCountry=GR';
         const body = {
@@ -838,6 +1042,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialize with watched locations
     chargerDetailsContainer.innerHTML = displayWatchedLocations();
+
+    // Fetch and display Lidl chargers
+    fetchLidlChargers();
 
     fetchChargers();
 });
