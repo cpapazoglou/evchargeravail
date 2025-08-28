@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "npm run build && cp -r dist /tmp/gh-pages-deploy && git checkout gh-pages && rm -rf * && cp -r /tmp/gh-pages-deploy/* . && rm -rf /tmp/gh-pages-deploy && git add . && git commit -m 'Deploy to GitHub Pages' && git push origin gh-pages && git checkout react-version"
+    "deploy": "npm install && npm run build && cp -r dist /tmp/gh-pages-deploy && git checkout gh-pages && rm -rf * && cp -r /tmp/gh-pages-deploy/* . && rm -rf /tmp/gh-pages-deploy && git add . && git commit -m 'Deploy to GitHub Pages' && git push origin gh-pages && git checkout react-version"
   },
   "dependencies": {
     "@types/leaflet": "^1.9.20",
