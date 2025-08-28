@@ -1,0 +1,156 @@
+body {
+  display: flex;
+  font-family: sans-serif;
+  margin: 0;
+}
+
+.app {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Charger status circles */
+.charger-circle {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 2px solid white; 
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+  vertical-align: middle;
+}
+
+.circle-green {
+  background: green;
+}
+
+.circle-red {
+  background: red;
+}
+
+.circle-half {
+  background: linear-gradient(to right, green 50%, red 50%);
+}
+
+/* Lidl charger markers */
+.circle-lidl {
+  background: #007cba; /* Lidl blue color */
+  position: relative;
+  border: 2px solid white;
+  box-shadow: 0 0 8px rgba(0,124,186,0.4);
+}
+
+.circle-lidl::after {
+  content: "L";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-weight: bold;
+  font-size: 10px;
+  text-shadow: 1px 1px 1px rgba(0,0,0,0.7);
+}
+
+/* Leaflet marker customization */
+.custom-marker {
+  border: none !important;
+  background: none !important;
+}
+
+.lidl-marker {
+  border: 2px solid #007cba !important;
+  border-radius: 50% !important;
+  background: rgba(0, 124, 186, 0.1) !important;
+}
+
+/* Notification button styles */
+.subscribe-btn, .unsubscribe-btn {
+  margin-top: 15px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.subscribe-btn {
+  background-color: #28a745;
+  color: white;
+}
+
+.unsubscribe-btn {
+  background-color: #dc3545;
+  color: white;
+}
+
+.subscribe-btn:hover {
+  background-color: #218838;
+}
+
+.unsubscribe-btn:hover {
+  background-color: #c82333;
+}
+
+/* Close button */
+.close-details-btn {
+  float: right;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.close-details-btn:hover {
+  background: #c82333;
+}
+
+/* Offline indicator */
+.offline-indicator {
+  position: fixed;
+  top: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #dc3545;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  z-index: 10000;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.offline-indicator.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Animations */
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .app {
+    flex-direction: column;
+  }
+  
+  .leaflet-container {
+    width: 100vw !important;
+    height: 60vh !important;
+  }
+  
+  .sidebar {
+    width: 100vw !important;
+    height: 40vh !important;
+  }
+}

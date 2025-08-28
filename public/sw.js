@@ -12,9 +12,8 @@ self.addEventListener('install', event => {
             return cache.addAll([
                 '/',
                 '/index.html',
-                '/script.js',
-                '/style.css',
-                '/manifest.json'
+                '/manifest.json',
+                '/vite.svg'
             ]);
         })
     );
@@ -70,8 +69,8 @@ self.addEventListener('push', event => {
 
     const options = {
         body: data.body || 'Charger status update!',
-        icon: '/icon-192.png',
-        badge: '/icon-192.png',
+        icon: '/vite.svg',
+        badge: '/vite.svg',
         tag: data.tag || 'charger-notification',
         requireInteraction: true,
         data: data.url || '/',

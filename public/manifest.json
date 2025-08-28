@@ -11,13 +11,13 @@
   "version": "2.0.0",
   "icons": [
     {
-      "src": "/icon-plug-192.svg?v=1.0.0",
+      "src": "/vite.svg",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-plug-512.svg?v=1.0.0",
+      "src": "/vite.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
@@ -28,9 +28,9 @@
     {
       "name": "Refresh Chargers",
       "short_name": "Refresh",
-      "description": "Check latest charger availability",
+      "description": "Refresh charger availability",
       "url": "/?action=refresh",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/vite.svg", "sizes": "192x192" }]
     }
   ]
 }

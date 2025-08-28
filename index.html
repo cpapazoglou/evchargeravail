@@ -1,60 +1,41 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-    <link rel="manifest" href="manifest.json?v=1.0.0" onerror="console.log('Manifest not available in file:// mode')">
-    <meta name="theme-color" content="#28a745">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="EV Charger">
-    <link rel="apple-touch-icon" href="/icon-plug-192.svg?v=1.0.0" onerror="console.log('Apple touch icon not available')">
-
-    <!-- Cache control for iOS PWA updates -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=1.0.0" onerror="console.log('Favicon not available')">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EV Chargers Map</title>
-
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
     <!-- PWA Manifest and Icons -->
-    <link rel="manifest" href="manifest.json" onerror="console.log('Manifest not available in file:// mode')">
-    <meta name="theme-color" content="#28a745">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="EV Charger">
-    <link rel="apple-touch-icon" href="/icon-192.png" onerror="console.log('Apple touch icon not available')">
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" onerror="console.log('Favicon not available')">
-
-    <!-- Styles -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <!-- Install PWA Prompt -->
-    <div id="install-prompt" style="display: none; position: fixed; bottom: 20px; left: 20px; right: 20px; background: #28a745; color: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000; text-align: center;">
-        <p style="margin: 0 0 10px 0;">📱 Install EV Charger App for better experience!</p>
-        <button id="install-btn" style="background: white; color: #28a745; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-right: 10px;">Install</button>
-        <button id="dismiss-install" style="background: transparent; color: white; border: 1px solid white; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Later</button>
-    </div>
-
-    <div id="map"></div>
-    <div id="sidebar">
-        <h2>EV Charger Availability</h2>
-        <div id="charger-details">
-            <p>Click on a charger to see the details.</p>
-        </div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="script.js"></script>
-    <footer id="main-footer">
-        <span>⚡ Electrified by <a href="https://cpapazoglou.eu/" target="_blank" rel="noopener" style="color:#28a745; font-weight:bold; text-decoration:none;">CPAPAZOGLOU</a></span>
-    </footer>
-</body>
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#28a745" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="EV Charger" />
+    <link rel="apple-touch-icon" href="/vite.svg" />
+    
+    <!-- Cache control for iOS PWA updates -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    
+    <title>EV Charger Availability</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Register service worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+              console.log('SW registered: ', registration);
+            })
+            .catch(registrationError => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
+  </body>
 </html>
