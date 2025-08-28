@@ -1,0 +1,30 @@
+name: Update EV Charger Data
+
+on:
+  schedule:
+  - cron: '0 0 * * *'  # Run once a day at midnight
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests pandas gspread google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client
+        
+    - name: Download and process data
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+      run: |
+        python scripts/process_ev_data.py
