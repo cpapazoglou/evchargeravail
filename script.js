@@ -370,10 +370,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Only register service worker if running on http/https
         if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
             try {
-                const registration = await navigator.serviceWorker.register('/sw.js?v=' + Date.now(), {
+                const registration = await navigator.serviceWorker.register('/sw.js', {
                     scope: '/'
                 });
                 console.log('Service Worker registered:', registration);
+
+                // Flag to prevent showing update dialog multiple times
+                let updateDialogShown = false;
 
                 // Force update check
                 registration.addEventListener('updatefound', () => {
@@ -383,13 +386,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                                 // New version available
                                 console.log('🔄 New service worker available!');
-                                if (confirm('A new version is available! Reload to update?')) {
+                                if (!updateDialogShown && confirm('A new version is available! Reload to update?')) {
+                                    updateDialogShown = true;
                                     newWorker.postMessage({ action: 'skipWaiting' });
                                     window.location.reload();
+                                } else if (!updateDialogShown) {
+                                    // User clicked "Cancel", mark as shown to prevent re-showing
+                                    updateDialogShown = true;
                                 }
                             } else if (newWorker.state === 'installed' && !navigator.serviceWorker.controller) {
                                 // First time installation
                                 console.log('Service worker installed for the first time');
+                                updateDialogShown = false; // Reset flag for future updates
                             }
                         });
                     }
@@ -399,21 +407,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 setInterval(() => {
                     registration.update();
                 }, 30000);
-
-                // Handle service worker updates
-                registration.addEventListener('updatefound', () => {
-                    const newWorker = registration.installing;
-                    if (newWorker) {
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                // New version available
-                                if (confirm('A new version is available! Reload to update?')) {
-                                    window.location.reload();
-                                }
-                            }
-                        });
-                    }
-                });
 
                 // Register background sync if supported
                 if ('sync' in registration) {
@@ -634,7 +627,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const htmlText = await tokenResponse.text();
-            console.log('📄 Raw HTML response (first 200 chars):', htmlText.substring(0, 200));
 
             // Parse HTML to find token input
             const tokenMatch = htmlText.match(/<input[^>]*id="token"[^>]*value="([^"]*)"/);
@@ -770,8 +762,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log(`✅ Got detailed info for: ${charger.properties.name || locationId}`, locationData);
 
             // Build detailed charger information
-            const chargerName = locationData.Loc.name || charger.properties.LocationName || charger.properties.name || 'Lidl Charger';
-            const address = locationData.Loc.address || charger.properties.Address || 'Address not available';
+            const chargerName = locationData.Loc.name || 'Lidl Charger';
+            const address = locationData.Loc.address + ', ' + locationData.Loc.city
             const connectors = locationData.Loc.evses;
 
             let detailsHtml = `
