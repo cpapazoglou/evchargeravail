@@ -39,6 +39,26 @@ body {
     margin-bottom: 5px;
 }
 
+/* Charger status circles */
+.charger-circle {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    display: inline-block;
+    border: 2px solid white; 
+		box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    vertical-align: middle;
+}
+.circle-green {
+    background: green;
+}
+.circle-red {
+    background: red;
+}
+.circle-half {
+    background: linear-gradient(to right, green 50%, red 50%);
+}
+
 /* Notification button styles */
 .subscribe-btn, .unsubscribe-btn {
     margin-top: 15px;

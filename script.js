@@ -573,18 +573,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             const [lat, lon] = charger.location.split(',').map(Number);
             markerPositions.push([lat, lon]);
 
-            // Check if any plug is available
-            let isAvailable = false;
+            // Check plug statuses for chargers with two plugs
+            let plugStatuses = [];
             if (charger.zones) {
                 charger.zones.forEach(zone => {
                     if (zone.evses) {
                         zone.evses.forEach(evse => {
-                            if (evse.status && evse.status.toLowerCase() === 'available') {
-                                isAvailable = true;
+                            if (evse.status) {
+                                plugStatuses.push(evse.status.toLowerCase());
                             }
                         });
                     }
                 });
+            }
+
+            let markerClass = 'circle-red'; // Default: both unavailable
+            if (plugStatuses.length === 2) {
+                if (plugStatuses[0] === 'available' && plugStatuses[1] === 'available') {
+                    markerClass = 'circle-green';
+                } else if (plugStatuses[0] !== 'available' && plugStatuses[1] !== 'available') {
+                    markerClass = 'circle-red';
+                } else {
+                    markerClass = 'circle-half';
+                }
+            } else if (plugStatuses.some(s => s === 'available')) {
+                markerClass = 'circle-green';
             }
 
             // TESTING MODE: Make some chargers initially unavailable
@@ -602,11 +615,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // Create marker with appropriate color
-            const markerColor = isAvailable ? 'green' : 'red';
+            // Create marker with appropriate class
             const markerIcon = L.divIcon({
                 className: 'custom-marker',
-                html: `<div style="background-color: ${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.3);"></div>`,
+                html: `<div class="charger-circle ${markerClass}"></div>`,
                 iconSize: [20, 20],
                 iconAnchor: [10, 10]
             });
