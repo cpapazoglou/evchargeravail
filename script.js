@@ -750,7 +750,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             charger.zones.forEach(zone => {
                 if (zone.evses) {
                     zone.evses.forEach(evse => {
-                        plugsHtml += `<li>Plug ID: ${evse.identifier || evse.id}, Status: ${evse.status}</li>`;
+                        const plugId = evse.identifier || evse.id;
+                        const status = evse.status;
+                        let plugNotifyBtn = '';
+                        if (status && status.toLowerCase() !== 'available') {
+                            const plugKey = `${charger.id}_${plugId}`;
+                            const isPlugWatched = isLocationWatched(plugKey);
+                            const btnText = isPlugWatched ? 'Unsubscribe notification' : 'Notify me when plug available';
+                            const btnClass = isPlugWatched ? 'unsubscribe-btn' : 'subscribe-btn';
+                            plugNotifyBtn = `<button class="plug-notify-btn ${btnClass}" data-plugkey="${plugKey}" style="margin-left:10px; padding:8px; background-color:${isPlugWatched ? '#dc3545' : '#28a745'}; color:white; border:none; border-radius:3px; cursor:pointer; font-size:12px;">${btnText}</button>`;
+                        }
+                        plugsHtml += `<li>Plug ID: ${plugId}, Status: ${status} ${plugNotifyBtn}</li>`;
                     });
                 }
             });
@@ -761,7 +771,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let notificationButton = '';
         if (!isAvailable) {
             const isWatched = isLocationWatched(charger.id);
-            const buttonText = isWatched ? 'Unsubscribe from notifications' : 'Notify me when available';
+            const buttonText = isWatched ? 'Unsubscribe from notifications' : 'Notify me when location available';
             const buttonClass = isWatched ? 'unsubscribe-btn' : 'subscribe-btn';
 
             notificationButton = `
@@ -806,6 +816,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
         }
+
+        // Add event listeners for plug notification buttons
+        document.querySelectorAll('.plug-notify-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const plugKey = btn.getAttribute('data-plugkey');
+                if (isLocationWatched(plugKey)) {
+                    removeWatchedLocation(plugKey);
+                    btn.textContent = 'Notify me when available';
+                    btn.className = 'plug-notify-btn subscribe-btn';
+                    btn.style.backgroundColor = '#28a745';
+                } else {
+                    addWatchedLocation(plugKey, `${charger.name} (Plug ${plugKey.split('_')[1]})`);
+                    btn.textContent = 'Unsubscribe notification';
+                    btn.className = 'plug-notify-btn unsubscribe-btn';
+                    btn.style.backgroundColor = '#dc3545';
+                }
+            });
+        });
     };
 
     // Initialize with watched locations
