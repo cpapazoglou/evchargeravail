@@ -2,7 +2,6 @@
 import requests
 import zipfile
 import json
-import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 import os
@@ -36,18 +35,24 @@ def process_ev_data(data):
     """Process the JSON data to extract connector information"""
     rows = []
     
-    for location in data.get('Locations', []):
+    locations = data.get('Locations', [])
+    print(f"Processing {len(locations)} locations...")
+    
+    for location in locations:
         location_name = location.get('name', '')
         address = location.get('address', '')
         party_id = location.get('party_id', '')
         
         # Use location coordinates as fallback
-        lat = location.get('coordinates', {}).get('latitude', '')
-        lng = location.get('coordinates', {}).get('longitude', '')
-        coordinates = f"{lat},{lng}"
+        coordinates = location.get('coordinates', {})
+        lat = coordinates.get('latitude', '')
+        lng = coordinates.get('longitude', '')
+        coordinates_str = f"{lat},{lng}" if lat and lng else ""
 
-        for evse in location.get('evses', []):
-            for connector in evse.get('connectors', []):
+        evses = location.get('evses', [])
+        for evse in evses:
+            connectors = evse.get('connectors', [])
+            for connector in connectors:
                 max_power = connector.get('max_electric_power', '')
                 
                 # Determine HPC value
@@ -56,10 +61,11 @@ def process_ev_data(data):
                 except (TypeError, ValueError):
                     power_val = 0
                 hpc = '1' if power_val > 50000 else '0'
+                
                 row = {
                     'name': location_name,
                     'address': address,
-                    'coordinates': coordinates,
+                    'coordinates': coordinates_str,
                     'max_electric_power': max_power,
                     'party_id': party_id,
                     'HPC': hpc
@@ -92,15 +98,23 @@ def update_google_sheet(rows, credentials_json, sheet_name='EV Chargers in Greec
     
     # Clear existing data
     worksheet.clear()
-    
-    # Convert to DataFrame for easier handling
-    df = pd.DataFrame(rows)
-    
-    # Add headers and all data in one batch to avoid quota errors
     from datetime import datetime
     current_date = datetime.now().strftime('%Y-%m-%d')
     headers = [f"Name - {current_date}", 'Address', 'Coordinates', 'Max Electric Power', 'Party ID', 'HPC']
-    data = [headers] + df.astype(str).values.tolist()
+    
+    # Convert rows to strings efficiently
+    data_rows = []
+    for row in rows:
+        data_rows.append([
+            str(row['name']),
+            str(row['address']), 
+            str(row['coordinates']),
+            str(row['max_electric_power']),
+            str(row['party_id']),
+            str(row['HPC'])
+        ])
+    
+    data = [headers] + data_rows
     worksheet.update(values=data, range_name='A1')
     print(f"Updated Google Sheet '{sheet_name}' with {len(rows)} rows (batch write)")
 
